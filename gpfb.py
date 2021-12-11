@@ -9,7 +9,7 @@ sleep_time = 5
 
 def __init__():
     # PATH en FILE voor start up excel met op te nemen bestanden
-    STARTUP_source_PATH = 'C:/Users/jancl/scripts'
+    STARTUP_source_PATH = '.'
     STARTUP_source_FILE = 'INPUT-MtTime.xlsx'
 
     # reeks concatenates voor PATH en FILE; overbodige columns verwijderen
