@@ -23,10 +23,13 @@ def __init__(initFailCounter=0) -> tuple[str,DataFrame]:
     # reeks concatenates voor PATH en FILE; overbodige columns verwijderen
     SOURCE_inputfile = PathFile(STARTUP_source_PATH,STARTUP_source_FILE)
     STARTUP_DF = pd.read_excel(SOURCE_inputfile, engine='openpyxl')  
-    STARTUP_DF = STARTUP_DF[STARTUP_DF['SOURCE_FILE'].notna()]  # neem enkel records waar `SOURCE_FILE` ingevuld is
+    # neem enkel records waar `SOURCE_FILE` ingevuld is
+    STARTUP_DF = STARTUP_DF[STARTUP_DF['SOURCE_FILE'].notna()]  
+    # kijk of elke row NA is, en probeer max 10 opnieuw
     if STARTUP_DF['SOURCE_FILE'].isna().all():
         time.sleep(STARTUP_WAIT)
         initFailCounter += 1
+        print('ERROR __init__(): {0}'.format(initFailCounter))
         if initFailCounter == 10:
             print('exit, input file niet gevonden')
             exit()
