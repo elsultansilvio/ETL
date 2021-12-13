@@ -3,18 +3,26 @@ import pandas as pd
 from pandas.core.frame import DataFrame
 
 start_timer = time.time()
-counter = 0
-sleep_time = 5
+STARTUP_WAIT = 10  # programma gaat bij opstart x seconden wachten alvorens te starten (voor bv. VPN)
+counter = 0 # programma gaat na counter_max re-initialiseren (kijken of inputfile veranderd is)
+counter_max = 13
+sleep_time = 5  # wachttijd in seconden tussen status checks
 
 
-def __init__():
+def __init__() -> tuple[str,DataFrame]:
+    ''' Initialiseer, lees input (excel) in met `SOURCE` en `DESTINATION` van files\n
+        Test of file `SOURCE` en `DESTINATION` toegankelijk zijn (voor elke file), neem enkel files mee zonder error\n
+        Zet flags `RECENT_FILE_UPDATE` is True & `LAST_TRANSFER` is 0 zodat files meegenomen worden in `CopyTo` flow\n
+        Return
+        ------
+        Path naar bronfile (excel) `SOURCE_inputfile` str & DataFrame `STARTUP_DF_NoError`'''
     # PATH en FILE voor start up excel met op te nemen bestanden
     STARTUP_source_PATH = '.'
     STARTUP_source_FILE = 'INPUT-MtTime.xlsx'
 
     # reeks concatenates voor PATH en FILE; overbodige columns verwijderen
-    SOURCE = PathFile(STARTUP_source_PATH,STARTUP_source_FILE)
-    STARTUP_DF = pd.read_excel(SOURCE, engine='openpyxl')    
+    SOURCE_inputfile = PathFile(STARTUP_source_PATH,STARTUP_source_FILE)
+    STARTUP_DF = pd.read_excel(SOURCE_inputfile, engine='openpyxl')    
     STARTUP_DF['SOURCE'] = STARTUP_DF.apply(lambda x: PathFile(x['SOURCE_PATH'],x['SOURCE_FILE']), axis=1) 
     STARTUP_DF['DESTINATION'] = STARTUP_DF.apply(lambda x: PathFile(x['DESTINATION_PATH'],x['DESTINATION_FILE']), axis=1)   
     STARTUP_DF.drop(columns=['SOURCE_PATH','SOURCE_FILE','DESTINATION_FILE'], inplace=True) 
@@ -31,9 +39,15 @@ def __init__():
     STARTUP_DF_NoError = STARTUP_DF[(STARTUP_DF['ERROR_SOURCE'] == 0) & (STARTUP_DF['ERROR_DESTINATION'] == 0)].copy()
 
     STARTUP_DF_NoError = CopyTo(STARTUP_DF_NoError)                   
-    return SOURCE, STARTUP_DF_NoError
+    return SOURCE_inputfile, STARTUP_DF_NoError
 
-def re__init__(SOURCE, OLD_STARTUP_DF_NoError):
+def re__init__(SOURCE, OLD_STARTUP_DF_NoError) -> DataFrame:
+    ''' re-Initialiseer, lees input (excel) in met `SOURCE` en `DESTINATION` van files\n
+        Test of file `SOURCE` en `DESTINATION` toegankelijk zijn (voor elke file), neem enkel files mee zonder error\n
+        Zet flags `RECENT_FILE_UPDATE` is True & `LAST_TRANSFER` is 0 zodat NIEUWE files meegenomen worden in `CopyTo` flow\n
+        Return
+        ------
+        Path naar bronfile (excel) `SOURCE_inputfile` str & DataFrame `STARTUP_DF_NoError`'''
     # lees start up excel opnieuw in, concatenates voor PATH en FILE
     # & overbodige columns verwijderen
     STARTUP_DF = pd.read_excel(SOURCE, engine='openpyxl')
@@ -55,15 +69,16 @@ def re__init__(SOURCE, OLD_STARTUP_DF_NoError):
       
     return STARTUP_DF_NoError
 
-def PathFile(path, file):
-    ''' concatenate `PATH` en `FILE`\n
+def PathFile(path, file) -> str:
+    ''' concatenate `PATH` en `FILE`. Inputformat: bv. `SOURCE_PATH` = C:/Users/xxx/MIJNFOLDER\n
+        `!` geen `/` na `PATH` bij input!\n
         Return
         ------
         `path/file` str'''
     path_file = '{0}/{1}'.format(str(path),str(file))
     return path_file
 
-def LastModified(path_file):
+def LastModified(path_file) -> float:
     ''' wrapper functie os.path.getmtime(), \n 
 
         Return
@@ -194,15 +209,17 @@ def log(df):
     pass
 
 if __name__ == "__main__":
-    SOURCE, STARTUP_DF_NoError = __init__()  
+    # initialiseer na wachtperiode STARTUP_WAIT
+    time.sleep(STARTUP_WAIT)
+    SOURCE_inputfile, STARTUP_DF_NoError = __init__()  
 
     while True:
         time.sleep(sleep_time)
         counter += 1
         print(counter)
         # check every x seconds if ERROR_SOURCE is still accurate TD
-        if counter == 13:
-            STARTUP_DF_NoError = re__init__(SOURCE, STARTUP_DF_NoError)
+        if counter == counter_max:
+            STARTUP_DF_NoError = re__init__(SOURCE_inputfile, STARTUP_DF_NoError)
             print('reinit')
             counter = 0
 
